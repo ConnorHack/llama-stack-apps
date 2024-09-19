@@ -1,0 +1,93 @@
+name: "[ARC][CPU]  Run llama-stack-apps Tests"
+on:
+
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: 'GHA Runner Scale Set label to run workflow on.'
+        required: true
+        #TODO Remove fork in name below
+        default: llama-stack-apps-fork-gha-runnes-gpu
+
+      debug:
+        description: 'Run debugging steps?'
+        required: false
+        default: "true"
+
+      sleep_time:
+        description: '[DEBUG] sleep time for debugging'
+        required: true
+        default: "60"
+
+      branch:
+        description: "Branch parameter to control which branch to checkout"
+        required: true
+        default: "main"
+
+env: 
+  TOKENIZER_PATH: "models/llama3/api/tokenizer.py"  
+
+jobs:
+  execute_workflow:
+    name: Execute workload on Self-Hosted CPU k8s runner
+    defaults:
+      run:
+        shell: bash # default shell to run all steps for a given job.
+    #TODO Remove fork in name below
+    runs-on: ${{ github.event.inputs.runner != '' && github.event.inputs.runner || 'llama-stack-apps-fork-gha-runnes-gpu' }}
+    steps:
+      - name: "[DEBUG] Get runner container OS information"
+        id: os_info
+        if: ${{ github.event.inputs.debug == 'true' }}
+        run: |
+            cat /etc/os-release
+
+      - name: "Checkout 'meta-llama/llama-stack-apps' repository"
+        id: checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: "[DEBUG] Content of the repository after checkout"
+        id: content_after_checkout
+        if: ${{ github.event.inputs.debug == 'true' }}
+        run: |
+            ls -la ${GITHUB_WORKSPACE}
+
+      # Place sleep step before the test execution to "exec" into the test k8s POD and run tests manually to identify what dependencies are being used.
+      - name: "[DEBUG] sleep"
+        id: sleep
+        if: ${{ github.event.inputs.debug == 'true' && github.event.inputs.sleep_time != '' }}
+        run: |
+            sleep ${{ inputs.sleep_time }}
+
+      - name: "Installing 'apt' required packages"
+        id: apt_install
+        run: |
+          echo "[STEP] Installing 'apt' required packages"
+          sudo apt update -y
+          sudo apt upgrade -y
+          sudo apt install python3-pip -y
+
+      - name: "Installing 'llama-stack-apps' dependencies"
+        id: pip_install
+        run: |
+          echo "[STEP] Installing 'llama-stack-apps' python dependencies"
+          pip install -U pip setuptools
+          pip install -r requirements.txt
+          #pip install llama-models
+          export PYTHONPATH=$PYTHONPATH:$(pwd)
+
+      - name: Run test_e2e tests
+        id: run_test_e2e
+        if: always()
+        run: |
+          echo "[STEP]Running Tokenizer tests on Self-Hosted k8s ARC Runner"
+          cd $GITHUB_WORKSPACE && python3 -m unittest tests/test_e2e.py
+
+      - name: Publish Test Summary
+        id: test_summary
+        uses: test-summary/action@v2
+        with:
+          paths: "**/*.xml"
+        if: always()
