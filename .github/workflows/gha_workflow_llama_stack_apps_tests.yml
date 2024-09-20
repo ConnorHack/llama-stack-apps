@@ -83,7 +83,7 @@ jobs:
         if: always()
         run: |
           echo "[STEP]Running Tokenizer tests on Self-Hosted k8s ARC Runner"
-          cd $GITHUB_WORKSPACE && python3 -m unittest tests/test_e2e.py --junitxml="$GITHUB_WORKSPACE/result.xml"
+          cd $GITHUB_WORKSPACE && python3 pytest tests/test_e2e.py --junitxml="$GITHUB_WORKSPACE/result.xml"
 
       - name: Publish Test Summary
         id: test_summary
