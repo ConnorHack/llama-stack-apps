@@ -7,7 +7,7 @@ on:
         description: 'GHA Runner Scale Set label to run workflow on.'
         required: true
         #TODO Remove fork in name below
-        default: llama-stack-apps-fork-gha-runner-gpu
+        default: llama-stack-apps-fork-gha-runner-cpu
 
       debug:
         description: 'Run debugging steps?'
@@ -34,7 +34,7 @@ jobs:
       run:
         shell: bash # default shell to run all steps for a given job.
     #TODO Remove fork in name below
-    runs-on: ${{ github.event.inputs.runner != '' && github.event.inputs.runner || 'llama-stack-apps-fork-gha-runner-gpu' }}
+    runs-on: ${{ github.event.inputs.runner != '' && github.event.inputs.runner || 'llama-stack-apps-fork-gha-runner-cpu' }}
     steps:
       - name: "[DEBUG] Get runner container OS information"
         id: os_info
